@@ -40,32 +40,25 @@ class CSV:
     def cleanse(self):
         raise NotImplementedError('Should impl this.')
 
-from datetime import datetime as dt
+from datetime import datetime
 class BTSCSV(CSV):
     _template = '%Y/%m/%d %H:%M:%S'
     def _can_strptime(self, tstr):
         try:
-            dt.strptime(tstr, self._template)
+            datetime.strptime(tstr, self._template)
         except ValueError:
             return False
         return True
-    
+
     def cleanse(self):
-        raise NotImplementedError('不具合あり')
-        string_io = StringIO()
-        writer = csv.writer(string_io)
-        writer.writerows(self._rows)
-        # タグを除去
-        pattern = re.compile(r'<[^>]*?>')
-        buf = pattern.sub('', string_io.getvalue())
-        string_io = StringIO(buf)
-        # len(row) >= 12のものを残し、さらにrow[9]が日付のものを残す
-        self._row = [row for row in csv.reader(string_io)
-            if len(row) >= 12 and self._can_strptime(row[9])]
+        lines = [','.join(row) for row in self._rows]
+        selected_lines = [line for line in lines
+            if re.match(r'^[\w|\d]{32}', line) is not None]
+        self._rows = [row[:12] for row in csv.reader(selected_lines)
+            if self._can_strptime(row[9])]
 
 class RMCSV(CSV):
     def cleanse(self):
-        # \r\n を \2\3 に変更
         self._rows = [
                 [data.replace('\r', '\2').replace('\n', '\3') for data in row]
             for row in self._rows]

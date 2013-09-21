@@ -2,6 +2,9 @@
 
 from sitelib import Site, BTSSite, RMSite
 from csvlib import CSV, BTSCSV, RMCSV
+import json
+
+config = json.load(open('config.json', 'r'))
 
 class Manager:
     site = None
