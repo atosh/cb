@@ -75,14 +75,40 @@ class BTSSite(Site):
             'ctl00$ContentPlaceHolder1$ddlCreator':'all',
             'ctl00$ContentPlaceHolder1$txtIncKeyword':'',
             'ctl00$ContentPlaceHolder1$txtNotIncKeyword':'',
-            'ctl00$ContentPlaceHolder1$ddlPageRecordCount':'10',
-            'ctl00$ContentPlaceHolder1$btsCsv':'CSV出力',
+            'ctl00$ContentPlaceHolder1$ddlPageRecordCount':'100',
         }
         postdata = self._extract_hidden_value(contents, postdata)
         params = urllib.urlencode(postdata)
         self._connection.request('POST', path, params, self._headers)
         response = self._connection.getresponse()
         return StringIO.StringIO(response.read())
+    
+    def request2(self):
+        path = '/DrSum/support/ProjectList.aspx?projectID=12c90e47d7284500b7568d3f82e00d12'
+        self._connection.request('GET', path, headers=self._headers)
+        response = self._connection.getresponse()
+        contents = response.read()
+        postdata = {
+            'ctl00$ContentPlaceHolder1$txtNo':'',
+            'ctl00$ContentPlaceHolder1$ddlType':'all',
+            'ctl00$ContentPlaceHolder1$ddlCategory':'all',
+            'ctl00$ContentPlaceHolder1$ddlSeverity':'all',
+            'ctl00$ContentPlaceHolder1$ddlStatus':'all',
+            'ctl00$ContentPlaceHolder1$ddlCreator':'all',
+            'ctl00$ContentPlaceHolder1$txtIncKeyword':'',
+            'ctl00$ContentPlaceHolder1$txtNotIncKeyword':'',
+            'ctl00$ContentPlaceHolder1$ddlPageRecordCount':'100',
+        }
+        io = StringIO.StringIO()
+        for i in range(1, 11):
+            postdata = self._extract_hidden_value(contents, postdata)
+            postdata['__EVENTARGUMENT'] = 'Page$%d' % i
+            params = urllib.urlencode(postdata)
+            self._connection.request('POST', path, params, self._headers)
+            response = self._connection.getresponse()
+            contents = response.read()
+            io.write(contents)
+        return io
 
 class RMSite(Site):
     _host = 'fcredmine'

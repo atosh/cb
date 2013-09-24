@@ -1,7 +1,7 @@
 # coding: utf-8
 
-from sitelib import Site, BTSSite, RMSite
-from csvlib import CSV, BTSCSV, RMCSV
+from sitelib import BTSSite, RMSite
+from csvlib import BTSCSV, RMCSV
 import json
 
 config = json.load(open('config.json', 'r'))
