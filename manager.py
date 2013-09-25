@@ -1,7 +1,7 @@
 # coding: utf-8
 
-from sitelib import BTSSite, RMSite
-from csvlib import BTSCSV, RMCSV
+from sitelib import BTSHTMLSite, RMSite
+from csvlib import BTSHTMLCSV, RMCSV
 import json
 
 config = json.load(open('config.json', 'r'))
@@ -29,6 +29,14 @@ class BTSManager(Manager):
         self.site = BTSSite(user, pwd)
         self.csv = BTSCSV(filename)
 
+class BTSHTMLManager(BTSManager):
+    def __init__(self):
+        user = config['bts']['user']
+        pwd = config['bts']['pwd']
+        filename = config['bts']['filename']
+        self.site = BTSHTMLSite(user, pwd)
+        self.csv = BTSHTMLCSV(filename)
+        
 class RMManager(Manager):
     def __init__(self):
         user = config['rm']['user']
@@ -38,7 +46,7 @@ class RMManager(Manager):
         self.csv = RMCSV(filename)
 
 if __name__ == '__main__':
-    for manager in [BTSManager(), RMManager()]:
+    for manager in [BTSHTMLManager(), RMManager()]:
         manager.download()
         manager.cleanse()
         manager.save()

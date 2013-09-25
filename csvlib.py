@@ -30,7 +30,8 @@ class CSV:
         try:
             with open(self._filename, 'wb') as fout:
                 try:
-                    writer = csv.writer(fout)
+                    writer = csv.writer(
+                        fout, quoting=csv.QUOTE_ALL)
                     writer.writerows(self._rows)
                 except csv.Error, error:
                     print 'ERROR: file %s: %s' % (self._filename, error)
@@ -56,6 +57,18 @@ class BTSCSV(CSV):
             if re.match(r'^[\w|\d]{32}', line) is not None]
         self._rows = [row[:12] for row in csv.reader(selected_lines)
             if self._can_strptime(row[9])]
+
+class BTSHTMLCSV(BTSCSV):
+    _pattern = re.compile(
+        r'<td>(\d+)</td><td><a href=".*id=(\w{32})[^>]*>([^<]+)</a></td><td>([^<]+)</td><td>([^<]+)</td><td>([^<]+)</td><td>([^<]+)</td><td>([^<]+)</td><td>([^<]+)</td><td>([^<]+)</td>')
+    def set(self, readable):
+        readable.seek(0)
+        html_source = re.sub(r'</?font[^>]*>', '', readable.read())
+        html_source = html_source.decode('utf8').encode('sjis')
+        self._rows = self._pattern.findall(html_source)
+
+    def cleanse(self):
+        pass
 
 class RMCSV(CSV):
     def cleanse(self):

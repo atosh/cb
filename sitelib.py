@@ -82,8 +82,9 @@ class BTSSite(Site):
         self._connection.request('POST', path, params, self._headers)
         response = self._connection.getresponse()
         return StringIO.StringIO(response.read())
-    
-    def request2(self):
+
+class BTSHTMLSite(BTSSite):
+    def request(self):
         path = '/DrSum/support/ProjectList.aspx?projectID=12c90e47d7284500b7568d3f82e00d12'
         self._connection.request('GET', path, headers=self._headers)
         response = self._connection.getresponse()
