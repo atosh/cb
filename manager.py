@@ -1,7 +1,7 @@
 # coding: utf-8
 
-from sitelib import BTSHTMLSite, RMSite
-from csvlib import BTSHTMLCSV, RMCSV
+from sitelib import BTSSite, RMSite
+from csvlib import BTSCSV, RMCSV
 import json
 
 config = json.load(open('config.json', 'r'))
@@ -46,7 +46,7 @@ class RMManager(Manager):
         self.csv = RMCSV(filename)
 
 if __name__ == '__main__':
-    for manager in [BTSHTMLManager(), RMManager()]:
+    for manager in [BTSManager(), RMManager()]:
         manager.download()
         manager.cleanse()
         manager.save()

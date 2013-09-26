@@ -1,6 +1,17 @@
 # coding: utf-8
 
-import urllib, httplib, re, StringIO
+import httpsession
+import re
+from StringIO import StringIO
+
+def _extract_hidden_value(content):
+    pattern = re.compile(
+        r'<input type="hidden" name="(?P<name>.+)" id="(?P<id>.+)" value="(?P<value>.*)" />')
+    for m in pattern.finditer(content):
+        yield (m.group('name'), m.group('value'))
+
+def extract_hidden_value(content):
+    return dict((v for v in _extract_hidden_value(content)))
 
 class Site:
     _user = ''
@@ -26,130 +37,68 @@ class Site:
     def request(self):
         raise NotImplementedError('Should impl this.')
 
+import urllib2, cookielib
 class BTSSite(Site):
-    _host = 'bugtrack.wingarc.co.jp'
-    _headers = {
-        "Content-type": "application/x-www-form-urlencoded",
-        'Connection': 'keep-alive',
-        "Accept": "text/plain",
-    }
-    _connection = httplib.HTTPConnection(_host)
-
-    _pattern = re.compile(
-        r'<input.+type="hidden".+name="([^"]+)".+value="([^"]+)?".+?>')
+    host = 'bugtrack.wingarc.co.jp'
+    path = '/DrSum/support/ProjectList.aspx?projectID=12c90e47d7284500b7568d3f82e00d12'
+    url = 'http://' + host + path
+    session = httpsession.Session()
+    response = None
     
-    def _extract_hidden_value(self, contents, data):
-        for m in self._pattern.finditer(contents):
-            data[m.group(1)] = m.group(2)
-        return data
-
     def login(self):
-        path = '/DrSum/login.aspx'
-        self._connection.request('GET', path, headers=self._headers)
-        response = self._connection.getresponse()
-        contents = response.read()
-        postdata = {
+        self.response = self.session.get(self.url)
+        params = extract_hidden_value(self.response.content)
+        params.update({
+            '__LASTFOCUS':'',
+            '__EVENTTARGET':'',
+            '__EVENTARGUMENT':'',
             'txtUserID':self._user,
             'txtUserPass':self._pwd,
             'btnLogin':'ログイン',
-        }
-        postdata = self._extract_hidden_value(contents, postdata)
-        params = urllib.urlencode(postdata)
-        self._connection.request('POST', path, params, self._headers)
-        response = self._connection.getresponse()
-        contents = response.read()
-        cookie = self._extract_cookie(response)
-        self._headers['Cookie'] = cookie
+        })
+        self.response = self.session.post(self.response.url, params=params)
 
     def request(self):
-        path = '/DrSum/support/ProjectList.aspx?projectID=12c90e47d7284500b7568d3f82e00d12'
-        self._connection.request('GET', path, headers=self._headers)
-        response = self._connection.getresponse()
-        contents = response.read()
-        postdata = {
-            'ctl00$ContentPlaceHolder1$txtNo':'',
-            'ctl00$ContentPlaceHolder1$ddlType':'all',
-            'ctl00$ContentPlaceHolder1$ddlCategory':'all',
-            'ctl00$ContentPlaceHolder1$ddlSeverity':'all',
+        params = extract_hidden_value(self.response.content)
+        params.update({
+            '__EVENTTARGET':'ctl00$ContentPlaceHolder1$GridView1',
             'ctl00$ContentPlaceHolder1$ddlStatus':'all',
-            'ctl00$ContentPlaceHolder1$ddlCreator':'all',
-            'ctl00$ContentPlaceHolder1$txtIncKeyword':'',
-            'ctl00$ContentPlaceHolder1$txtNotIncKeyword':'',
             'ctl00$ContentPlaceHolder1$ddlPageRecordCount':'100',
-        }
-        postdata = self._extract_hidden_value(contents, postdata)
-        params = urllib.urlencode(postdata)
-        self._connection.request('POST', path, params, self._headers)
-        response = self._connection.getresponse()
-        return StringIO.StringIO(response.read())
-
-class BTSHTMLSite(BTSSite):
-    def request(self):
-        path = '/DrSum/support/ProjectList.aspx?projectID=12c90e47d7284500b7568d3f82e00d12'
-        self._connection.request('GET', path, headers=self._headers)
-        response = self._connection.getresponse()
-        contents = response.read()
-        postdata = {
-            'ctl00$ContentPlaceHolder1$txtNo':'',
-            'ctl00$ContentPlaceHolder1$ddlType':'all',
-            'ctl00$ContentPlaceHolder1$ddlCategory':'all',
-            'ctl00$ContentPlaceHolder1$ddlSeverity':'all',
-            'ctl00$ContentPlaceHolder1$ddlStatus':'all',
-            'ctl00$ContentPlaceHolder1$ddlCreator':'all',
-            'ctl00$ContentPlaceHolder1$txtIncKeyword':'',
-            'ctl00$ContentPlaceHolder1$txtNotIncKeyword':'',
-            'ctl00$ContentPlaceHolder1$ddlPageRecordCount':'100',
-        }
-        io = StringIO.StringIO()
-        for i in range(1, 11):
-            postdata = self._extract_hidden_value(contents, postdata)
-            postdata['__EVENTARGUMENT'] = 'Page$%d' % i
-            params = urllib.urlencode(postdata)
-            self._connection.request('POST', path, params, self._headers)
-            response = self._connection.getresponse()
-            contents = response.read()
-            io.write(contents)
-        return io
+            'ctl00$ContentPlaceHolder1$btsCsv':'CSV出力',
+        })
+        self.response = self.session.post(self.url, params=params)
+        return StringIO(self.response.content)
 
 class RMSite(Site):
-    _host = 'fcredmine'
-    _headers = {
-        "Content-type": "application/x-www-form-urlencoded",
-        'Connection': 'keep-alive',
-        "Accept": "text/plain",
-    }
-    _connection = httplib.HTTPConnection(_host)
+    host = 'fcredmine'
+    session = httpsession.Session()
+    response = None
 
-    def _extract_auth_token(self, contents):
+    def _extract_auth_token(self, content):
             m = re.search(
                 r'<input name="authenticity_token".+value="(.+)" />',
-                contents)
+                content)
             if m is None:
-                raise httplib.HTTPException(
-                    'authenticity_token has not been set.')
+                raise Exception('authenticity_token has not been set.')
             return m.group(1)
 
     def login(self):
         path = '/login'
-        self._connection.request('GET', path, headers=self._headers)
-        response = self._connection.getresponse()
-        contents = response.read()
-        self._headers['Cookie'] = self._extract_cookie(response)
-        auth_token = self._extract_auth_token(contents)
-        postdata = {
+        url = 'http://' + self.host + path
+        self.response = self.session.get(url)
+        content = self.response.content
+        auth_token = self._extract_auth_token(content)
+        params = {
             'username':self._user,
             'password':self._pwd,
             'authenticity_token':auth_token,
         }
-        params = urllib.urlencode(postdata)
-        self._connection.request('POST', path, params, self._headers)
-        response = self._connection.getresponse()
-        contents = response.read()
-        self._headers['Cookie'] = self._extract_cookie(response)
+        self.response = self.session.post(url, params=params)
+        content = self.response.content
 
     def request(self):
         path = '/projects/mb/issues.csv'
-        self._connection.request('GET', path, headers=self._headers)
-        response = self._connection.getresponse()
-        return StringIO.StringIO(response.read())
+        url = 'http://' + self.host + path
+        self.response = self.session.get(url)
+        return StringIO(self.response.content)
 
