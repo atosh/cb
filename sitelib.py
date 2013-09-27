@@ -97,6 +97,15 @@ class RMSite(Site):
         content = self.response.content
 
     def request(self):
+        path = '/projects/mb/issues?query_id=40'
+        url = 'http://' + self.host + path
+        self.response = self.session.get(url)
+        """
+        auth_token = self._extract_auth_token(self.response.content)
+        params = {
+            'authenticity_token':auth_token,
+        }
+        """
         path = '/projects/mb/issues.csv'
         url = 'http://' + self.host + path
         self.response = self.session.get(url)
