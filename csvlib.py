@@ -15,28 +15,15 @@ class CSV:
         self._rows = [row for row in reader]
 
     def load(self):
-        try:
-            with open(self._filename, 'rb') as fin:
-                reader = csv.reader(fin)
-                try:
-                    self._rows = [row for row in reader]
-                except csv.Error, error:
-                    print 'ERROR: file %s, line %d: %s' % (
-                        self._filename, reader.line_num, error)
-        except IOError, error:
-            print 'ERROR: file %s: %s' % (self._filename, error)
+        with open(self._filename, 'rb') as fin:
+            reader = csv.reader(fin)
+            self._rows = [row for row in reader]
 
     def save(self):
-        try:
-            with open(self._filename, 'wb') as fout:
-                try:
-                    writer = csv.writer(
-                        fout, quoting=csv.QUOTE_ALL)
-                    writer.writerows(self._rows)
-                except csv.Error, error:
-                    print 'ERROR: file %s: %s' % (self._filename, error)
-        except IOError, error:
-            print 'ERROR: file %s: %s' % (self._filename, error)
+        with open(self._filename, 'wb') as fout:
+            writer = csv.writer(
+                fout, quoting=csv.QUOTE_ALL)
+            writer.writerows(self._rows)
 
     def cleanse(self):
         raise NotImplementedError('Should impl this.')
@@ -51,24 +38,20 @@ class BTSCSV(CSV):
             return False
         return True
 
+    def _manage_comma_in_title(self, row):
+        subrow = row[3:]
+        candidates = ['サポート', 'サポート★', '改修要望']
+        while len(subrow) >= 2 and not subrow[1].decode('sjis').encode('utf8') in candidates:
+            subrow = [','.join(subrow[0:2])] + subrow[2:]
+        ret = row[:3] + subrow
+        return ret[:12]
+
     def cleanse(self):
+        #import ipdb; ipdb.set_trace()
         lines = [','.join(row) for row in self._rows]
         selected_lines = [line for line in lines
             if re.match(r'^[\w|\d]{32}', line) is not None]
-        self._rows = [row[:12] for row in csv.reader(selected_lines)
-            if self._can_strptime(row[9])]
-
-class BTSHTMLCSV(BTSCSV):
-    _pattern = re.compile(
-        r'<td>(\d+)</td><td><a href=".*id=(\w{32})[^>]*>([^<]+)</a></td><td>([^<]+)</td><td>([^<]+)</td><td>([^<]+)</td><td>([^<]+)</td><td>([^<]+)</td><td>([^<]+)</td><td>([^<]+)</td>')
-    def set(self, readable):
-        readable.seek(0)
-        html_source = re.sub(r'</?font[^>]*>', '', readable.read())
-        html_source = html_source.decode('utf8').encode('sjis')
-        self._rows = self._pattern.findall(html_source)
-
-    def cleanse(self):
-        pass
+        self._rows = [self._manage_comma_in_title(row) for row in csv.reader(selected_lines)]
 
 class RMCSV(CSV):
     def cleanse(self):
