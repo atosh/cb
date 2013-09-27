@@ -29,14 +29,6 @@ class BTSManager(Manager):
         self.site = BTSSite(user, pwd)
         self.csv = BTSCSV(filename)
 
-class BTSHTMLManager(BTSManager):
-    def __init__(self):
-        user = config['bts']['user']
-        pwd = config['bts']['pwd']
-        filename = config['bts']['filename']
-        self.site = BTSHTMLSite(user, pwd)
-        self.csv = BTSHTMLCSV(filename)
-        
 class RMManager(Manager):
     def __init__(self):
         user = config['rm']['user']

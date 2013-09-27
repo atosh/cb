@@ -47,7 +47,6 @@ class BTSCSV(CSV):
         return ret[:12]
 
     def cleanse(self):
-        #import ipdb; ipdb.set_trace()
         lines = [','.join(row) for row in self._rows]
         selected_lines = [line for line in lines
             if re.match(r'^[\w|\d]{32}', line) is not None]
